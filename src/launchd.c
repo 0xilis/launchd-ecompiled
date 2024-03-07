@@ -184,16 +184,37 @@ void do_launchd_init(void) {
         }
         struct stat statbuf;
         if (stat("/AppleInternal", &statbuf) == 0) {
-            launchd_apple_internal = 1;
+            launchd_apple_internal = true;
         } else {
-            launchd_apple_internal = 0;
+            launchd_apple_internal = false;
         }
         launchd_ramdisk = is_ramdisk();
         const char *bootargs;
         size_t bootarglen = sysctlbyname_on_crack("kern.bootargs", &bootargs);
         if (bootarglen) {
-            /* finish later */
+            if (strnstr(bootargs, "-v", bootarglen)) {
+                launchd_verbose_boot = true;
+            } else {
+                launchd_verbose_boot = false;
+            }
+            someglobalvariable = finishlater2(bootargs, bootarglen, "cs_enforcement_disable=", 0x17, 0xa);
+            if (strstr(bootargs, "launchctl_enforce_codesign=")) {
+                /* finish later */
+            }
         }
+        const char *machine;
+        ssize_t machinelen = sysctlbyname_on_crack("hw.machine", &machine);
+        if (strnstr(machine, "AppleTV", machinelen)) {
+            launchd_appletv = true;
+        } else {
+            launchd_appletv = false;
+        }
+        /* big global variable set up im too lazy for this rn */
+        launchd_bool_from_plist(&launchd_use_gmalloc, "UseGuardMalloc");
+        if (!launchd_use_gmalloc) {
+            launchd_bool_from_plist(&launchd_use_gmalloc, "use-libgmalloc");
+        }
+        /* finish later */
     }
 }
 
